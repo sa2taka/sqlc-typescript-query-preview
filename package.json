@@ -16,15 +16,26 @@
   "contributes": {
     "configuration": {
       "title": "sqlc TypeScript Query Viewer",
+      "commands": [
+        {
+          "command": "sqlc-query-visualizer.goToSqlQuery",
+          "title": "Go to SQL Query"
+        }
+      ],
       "properties": {
-        "sqlcExtension.sqlcDirectory": {
+        "sqlcTypeScriptQueryPreview.sqlcDirectory": {
+          "type": "string",
+          "default": "db/queries",
+          "description": "Directory containing sqlc generated files"
+        },
+        "sqlcTypeScriptQueryPreview.sqlcGeneratedDirectory": {
           "type": "string",
           "default": "src/generated/sqlc",
           "description": "Directory containing sqlc generated files"
         },
-        "sqlcExtension.repositoryDirectory": {
+        "sqlcTypeScriptQueryPreview.usingGeneratedSqlcDirectory": {
           "type": "string",
-          "default": "src/repository",
+          "default": "src/repositories",
           "description": "Directory containing using sqlc generated files"
         }
       }

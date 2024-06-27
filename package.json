@@ -1,5 +1,6 @@
 {
   "name": "sqlc-typescript-query-preview",
+  "publisher": "sa2taka",
   "displayName": "sqlc-typescript-query-preview",
   "description": "This extension is made just for me.",
   "version": "0.0.1",
@@ -13,6 +14,10 @@
     "onLanguage:typescript"
   ],
   "main": "./dist/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sa2taka/sqlc-typescript-query-preview"
+  },
   "contributes": {
     "configuration": {
       "title": "sqlc TypeScript Query Viewer",

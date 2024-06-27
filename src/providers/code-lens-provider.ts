@@ -1,6 +1,11 @@
 import * as ts from "typescript";
 import * as vscode from "vscode";
-import { buildSqlcQueryFilePath } from "../find-sqlc-query";
+import {
+  extractSqlcFunctions,
+  findImportedUsingGeneratedSqlcFiles,
+  FindImportedUsingGeneratedSqlcFilesResult,
+  isInUsingGeneratedSqlcDirectoryAsAbsolutePath,
+} from "../find-sqlc-query";
 
 interface SqlcFunction {
   name: string;
@@ -11,71 +16,60 @@ interface SqlcFunction {
 const NAME_REGEXP = /-- name:\s*(\w+)/dg;
 
 export class CodeLensProvider implements vscode.CodeLensProvider {
-  private sqlcFunctions: SqlcFunction[] = [];
-
   async provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
     const text = document.getText();
     const sourceFile = ts.createSourceFile(document.fileName, text, ts.ScriptTarget.Latest, true);
 
-    const result = await this.loadSqlcFunctions(document);
-    if (!result) {
-      return [];
-    }
+    if (isInUsingGeneratedSqlcDirectoryAsAbsolutePath(document.fileName)) {
+      const sqlcResults = await extractSqlcFunctions(document.fileName);
+      if (sqlcResults.length <= 0) {
+        return [];
+      }
 
-    this.visitNode(sourceFile, document, codeLenses);
+      this.visitNodeForUsingGeneratedQuery(sourceFile, document, codeLenses, sqlcResults);
+    } else {
+      const importedResults = findImportedUsingGeneratedSqlcFiles(document);
+
+      const results = await Promise.all(
+        importedResults.map(({ filepath }) => {
+          return extractSqlcFunctions(filepath);
+        })
+      );
+
+      if (results.every((r) => !r)) {
+        return [];
+      }
+
+      this.visitNodeForImportedQuery(sourceFile, document, codeLenses, importedResults, results.flat());
+    }
 
     return codeLenses;
   }
 
-  private async loadSqlcFunctions(document: vscode.TextDocument): Promise<boolean> {
-    const sqlcFilePath = buildSqlcQueryFilePath(document.fileName);
-    if (!sqlcFilePath) {
-      return false;
-    }
-
-    try {
-      const sqlcFileContent = await vscode.workspace.fs.readFile(vscode.Uri.file(sqlcFilePath));
-      const sqlcFileText = new TextDecoder().decode(sqlcFileContent);
-
-      this.sqlcFunctions = [];
-      const results = sqlcFileText.matchAll(NAME_REGEXP);
-
-      for (const result of results) {
-        const offset = result.indices?.[0][0] ?? 0;
-
-        this.sqlcFunctions.push({
-          name: result[1],
-          sqlFilePath: sqlcFilePath,
-          offset,
-        });
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error reading SQLC file:", error);
-      return false;
-    }
-  }
-
-  private visitNode(node: ts.Node, document: vscode.TextDocument, codeLenses: vscode.CodeLens[]): void {
+  private visitNodeForUsingGeneratedQuery(
+    node: ts.Node,
+    document: vscode.TextDocument,
+    codeLenses: vscode.CodeLens[],
+    sqlcFunctions: SqlcFunction[]
+  ): void {
     if (this.isSqlcFunction(node)) {
       const functionName = this.getFunctionName(node);
       if (functionName) {
-        const sqlcFunction = this.sqlcFunctions.find((f) => f.name === functionName);
+        const sqlcFunction = sqlcFunctions.find((f) => f.name === functionName);
         if (sqlcFunction) {
           const range = this.nodeToRange(document, node);
           const lens = new vscode.CodeLens(range, {
             title: "Go to SQL query",
-            command: "sqlc-query-visualizer.goToSqlQuery",
-            arguments: [sqlcFunction.sqlFilePath, sqlcFunction.offset],
+            command: "sqlc-typescript-query-preview.goToSqlQuery",
+            arguments: [{ sqlFilePath: sqlcFunction.sqlFilePath, offset: sqlcFunction.offset }],
           });
           codeLenses.push(lens);
         }
       }
     }
 
-    ts.forEachChild(node, (child) => this.visitNode(child, document, codeLenses));
+    ts.forEachChild(node, (child) => this.visitNodeForUsingGeneratedQuery(child, document, codeLenses, sqlcFunctions));
   }
 
   private isSqlcFunction(node: ts.Node): boolean {
@@ -91,6 +85,7 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
     if (ts.isArrowFunction(node) && ts.isVariableDeclaration(parent) && ts.isVariableStatement(variableRoot)) {
       return variableRoot.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false;
     }
+    // TODO: import * as query from "./queries" の形式に対応する
     return false;
   }
 
@@ -102,6 +97,32 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
       return node.parent.name.text;
     }
     return undefined;
+  }
+
+  private visitNodeForImportedQuery(
+    node: ts.Node,
+    document: vscode.TextDocument,
+    codeLenses: vscode.CodeLens[],
+    importedResults: FindImportedUsingGeneratedSqlcFilesResult[],
+    sqlcFunctions: SqlcFunction[]
+  ): void {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      const expression = node.expression;
+      if (ts.isIdentifier(expression)) {
+        const sqlcFunction = sqlcFunctions.find((f) => f.name === expression.text);
+        if (sqlcFunction) {
+          const range = this.nodeToRange(document, node);
+          const lens = new vscode.CodeLens(range, {
+            title: "Go to SQL query",
+            command: "sqlc-typescript-query-preview.goToSqlQuery",
+            arguments: [{ sqlFilePath: sqlcFunction.sqlFilePath, offset: sqlcFunction.offset }],
+          });
+          codeLenses.push(lens);
+        }
+      }
+    }
+
+    ts.forEachChild(node, (child) => this.visitNodeForImportedQuery(child, document, codeLenses, importedResults, sqlcFunctions));
   }
 
   private nodeToRange(document: vscode.TextDocument, node: ts.Node): vscode.Range {

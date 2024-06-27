@@ -3,12 +3,17 @@ import { goToSqlQuery } from "./commands/go-to-sql-query";
 import { CodeLensProvider } from "./providers/code-lens-provider";
 import { HoverProvider } from "./providers/hover-provider";
 
+const targets: vscode.DocumentSelector = [
+  { scheme: "file", language: "typescript" },
+  { scheme: "file", language: "typescriptreact" },
+];
+
 export function activate(context: vscode.ExtensionContext) {
-  const hoverProvider = vscode.languages.registerHoverProvider({ scheme: "file", language: "typescript" }, new HoverProvider());
+  const hoverProvider = vscode.languages.registerHoverProvider(targets, new HoverProvider());
 
-  const codeLensProvider = vscode.languages.registerCodeLensProvider({ scheme: "file", language: "typescript" }, new CodeLensProvider());
+  const codeLensProvider = vscode.languages.registerCodeLensProvider(targets, new CodeLensProvider());
 
-  const goToSqlQueryCommand = vscode.commands.registerCommand("sqlc-query-visualizer.goToSqlQuery", goToSqlQuery);
+  const goToSqlQueryCommand = vscode.commands.registerCommand("sqlc-typescript-query-preview.goToSqlQuery", goToSqlQuery);
 
   context.subscriptions.push(
     hoverProvider,

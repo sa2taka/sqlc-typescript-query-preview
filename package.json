@@ -18,7 +18,7 @@
       "title": "sqlc TypeScript Query Viewer",
       "commands": [
         {
-          "command": "sqlc-query-visualizer.goToSqlQuery",
+          "command": "sqlc-typescript-query-preview.goToSqlQuery",
           "title": "Go to SQL Query"
         }
       ],

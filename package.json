@@ -3,7 +3,7 @@
   "publisher": "sa2taka",
   "displayName": "sqlc-typescript-query-preview",
   "description": "This extension is made just for me.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -11,7 +11,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:typescript"
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
   ],
   "main": "./dist/extension.js",
   "repository": {
@@ -47,6 +48,7 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "pnpm run package",
     "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",

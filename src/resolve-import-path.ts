@@ -20,6 +20,11 @@ function loadTsConfig(fileName: string): ts.ParsedCommandLine | undefined {
   return parsedOptions;
 }
 
+/**
+ * @param importPath e.g. `@/repositories/user-repository`
+ * @param targetFile e.g. `/Users/username/project/src/controllers/user-controller.ts`
+ * @returns
+ */
 export function resolveImportPath(importPath: string, targetFile: string): string | undefined {
   let parsedConfig: ts.ParsedCommandLine | undefined;
   if (memorizedTsConfig.get(targetFile)) {

@@ -5,7 +5,7 @@ export function getSqlcDirectory(): string {
 }
 
 export function getGeneratedSqlcDirectory(): string {
-  return vscode.workspace.getConfiguration("sqlcTypeScriptQueryPreview").get("generatedSqlcDirectory", "src/generated/sqlc");
+  return vscode.workspace.getConfiguration("sqlcTypeScriptQueryPreview").get("sqlcGeneratedDirectory", "src/generated/sqlc");
 }
 
 export function getUsingGeneratedSqlcDirectory(): string {

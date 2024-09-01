@@ -27,3 +27,14 @@ project/
     └── repository/
         └── *.ts
 ```
+
+## Memo
+
+### How to publish the extension.
+
+ref: https://code.visualstudio.com/api/working-with-extensions/publishing-extension
+
+1. Access [Azure DevOps](https://dev.azure.com/) to get the PAT.
+2. Update the `version` in `package.json`
+3. Run `vsce package <version> --no-dependencies`
+4. Run `vsce publish <version> --no-dependencies`
